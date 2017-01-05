@@ -18,6 +18,12 @@ function do_helloworld(cmd, args)
     io.write("Hello world: ", cmd, " - ", args[1], "\n")
 end
 
+function do_anotherhello()
+    -- You don't need to accept any parameters in your function if you don't
+    -- use them
+    io.write("Another hello world!\n")
+end
+
 -- You can set a default value for any global variables
 -- If you do, they will also be available to set as flags
 myvar = "default_value"
