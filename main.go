@@ -1,10 +1,12 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"io"
 	"os"
 	"os/exec"
+	"strconv"
 	"strings"
 
 	"github.com/chzyer/readline"
@@ -19,17 +21,20 @@ func Run(luaFile string) {
 		EOFPrompt:       "exit",
 	})
 	if err != nil {
-		panic(err)
+		fmt.Println(err.Error())
+		os.Exit(1)
 	}
 	defer rl.Close()
 
 	L := lua.NewState()
 	if err = L.DoFile(luaFile); err != nil {
-		panic(err)
+		fmt.Println(err.Error())
+		os.Exit(1)
 	}
 	defer L.Close()
 
 	registerLuaFunctions(L)
+	parseCommandLineFlags(L)
 
 	// The banner function lets you print some text when the CLI starts
 	bannerfn := L.GetGlobal("banner")
@@ -103,11 +108,58 @@ func Run(luaFile string) {
 	}
 }
 
+func parseCommandLineFlags(L *lua.LState) {
+	// Go through all globals and identify any variables we've configured,
+	// making them available as flags
+	stringArgs := map[string]*string{}
+	numArgs := map[string]*float64{}
+	boolArgs := map[string]*bool{}
+
+	globals := L.Get(lua.GlobalsIndex).(*lua.LTable)
+	globals.ForEach(func(klv lua.LValue, v lua.LValue) {
+		k := klv.String()
+		if strings.HasPrefix(k, "_") {
+			// Skip internal variables
+			return
+		}
+		switch t := v.Type(); t {
+		case lua.LTString:
+			stringArgs[k] = flag.String(k, v.String(), "Set "+k)
+		case lua.LTNumber:
+			num := float64(v.(lua.LNumber))
+			numArgs[k] = flag.Float64(k, num, "Set "+k)
+		case lua.LTBool:
+			boolArgs[k] = flag.Bool(k, lua.LVAsBool(v), "Set "+k)
+		}
+	})
+	flag.Parse()
+	for k, v := range stringArgs {
+		L.SetGlobal(k, lua.LString(*v))
+	}
+	for k, v := range numArgs {
+		L.SetGlobal(k, lua.LNumber(*v))
+	}
+	for k, v := range boolArgs {
+		L.SetGlobal(k, lua.LBool(*v))
+	}
+}
+
 func cliVariable(L *lua.LState) int {
 	varname := L.ToString(1)
 	value := L.ToString(2)
+	vartype := L.GetGlobal(varname).Type()
 	if value != "" {
-		L.SetGlobal(varname, lua.LString(value))
+		if vartype == lua.LTNumber {
+			f, err := strconv.ParseFloat(value, 64)
+			if err != nil {
+				fmt.Println("You must provide a number for numeric variable",
+					varname)
+				return 0
+			}
+			L.SetGlobal(varname, lua.LNumber(f))
+		} else {
+			L.SetGlobal(varname, lua.LString(value))
+		}
 	}
 	fmt.Printf("%s=%s\n", varname, L.GetGlobal(varname).String())
 	return 0 // Number of results

@@ -18,6 +18,10 @@ function do_helloworld(cmd, args)
     io.write("Hello world: ", cmd, " - ", args[1], "\n")
 end
 
+-- You can set a default value for any global variables
+-- If you do, they will also be available to set as flags
+myvar = "default_value"
+
 function do_myvar(cmd, args)
     -- Get/Set a string variable
     -- These variables are accessible as global variables in lua, and you can
