@@ -81,7 +81,7 @@ func Run(luaFile string) {
 		parts, err := shlex.Split(line)
 		if err != nil {
 			fmt.Println("Error splitting up command string:", err)
-			parts = []string{}
+			continue
 		}
 
 		cmd, args := parts[0], parts[1:]
