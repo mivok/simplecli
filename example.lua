@@ -71,11 +71,15 @@ function do_cmd(cmd, args)
     os.execute("echo Hello " .. args[1] .. " | sed s/foo/bar/")
 end
 
-function do_edit(cmd, args)
+-- Your do_ function can take a third parameter. If it does, this
+-- parameter will be the name of a temporary file created right before
+-- your function is called that you can use to download your file to. The
+-- file will exist and be blank at the start of the function, and will be
+-- deleted right after.
+function do_edit(cmd, args, tempfile)
     -- The following is how you do an edit workflow, where a command downloads
     -- a file, you edit it in your text editor and then it's re-uploaded if it
     -- was modified.
-    tempfile = os.tmpname()
     os.execute(string.format("curl -s -o %s httpbin.org/get?foo=hello%%20world",
         tempfile))
 
@@ -89,26 +93,16 @@ function do_edit(cmd, args)
                 httpbin.org/post -d @%s
             ]], tempfile))
     end
-    os.remove(tempfile)
 end
 
-function do_cat(cmd, args)
+function do_cat(cmd, args, tempfile)
     -- Display a downloaded file
-    tempfile = os.tmpname()
 
     -- This is contrived (you could just not add the -o option to curl), but
     -- it's intended to show the behavior where the command you run downloads
     -- the file to disk (e.g. aws s3 cp)
     os.execute("curl -s -o " .. tempfile .. " https://www.example.com/")
-
-    -- cat the file
-    f = io.open(tempfile)
-    content = f:read("*all")
-    io.write(content)
-    f:close()
-    -- Or you can do one of the following using os.execute:
-    -- os.execute("cat " .. tempfile)
+    os.execute("cat " .. tempfile)
+    -- Or you can do the following to view it with your pager
     -- os.execute("less " .. tempfile)
-
-    os.remove(tempfile)
 end

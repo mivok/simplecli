@@ -4,6 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"os"
 	"os/exec"
 	"sort"
@@ -120,18 +121,41 @@ func Run(luaFile string) {
 			argsTable.Append(lua.LString(arg))
 		}
 
-		fn := L.GetGlobal("do_" + cmd)
-		if fn.Type() != lua.LTFunction {
+		fn, ok := L.GetGlobal("do_" + cmd).(*lua.LFunction)
+		if !ok {
 			fmt.Println("Unknown command:", cmd)
 			continue
 		}
 
-		if err = L.CallByParam(lua.P{
-			Fn:      fn,
-			NRet:    0,
-			Protect: true,
-		}, lua.LString(cmd), argsTable); err != nil {
-			fmt.Println(err.Error())
+		if fn.Proto.NumParameters == 3 {
+			// A function can take a third parameter, which will be a filename
+			// for a temporary file. We only want to make it though if the
+			// function will use it.
+			tmpfile, err := ioutil.TempFile("", "simplecli")
+			if err != nil {
+				fmt.Println(err)
+				continue
+			}
+			tmpfilename := tmpfile.Name()
+			// We don't use the file directly, so close it
+			tmpfile.Close()
+			if err = L.CallByParam(lua.P{
+				Fn:      fn,
+				NRet:    0,
+				Protect: true,
+			}, lua.LString(cmd), argsTable,
+				lua.LString(tmpfilename)); err != nil {
+				fmt.Println(err.Error())
+			}
+			os.Remove(tmpfilename)
+		} else {
+			if err = L.CallByParam(lua.P{
+				Fn:      fn,
+				NRet:    0,
+				Protect: true,
+			}, lua.LString(cmd), argsTable); err != nil {
+				fmt.Println(err.Error())
+			}
 		}
 	}
 }
