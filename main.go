@@ -49,6 +49,7 @@ func Run(luaFile string) {
 			fmt.Println(err.Error())
 		}
 		fmt.Println(L.Get(-1).String())
+		L.Pop(1)
 	}
 
 	// Set a prompt function to customize the prompt
@@ -63,6 +64,7 @@ func Run(luaFile string) {
 				fmt.Println(err.Error())
 			}
 			rl.SetPrompt(L.Get(-1).String())
+			L.Pop(1)
 		}
 		line, err := rl.Readline()
 		// Deal with ^C and ^D
