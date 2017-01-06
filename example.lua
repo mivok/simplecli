@@ -18,15 +18,13 @@ function do_helloworld(cmd, args)
     io.write("Hello world: ", cmd, " - ", args[1], "\n")
 end
 
--- Help for a function is done by implementing help_commandname
+-- Help for a function is done by setting help_commandname
 -- Leading whitespace and blank lines at the beginning and end will be stripped
-function help_helloworld()
-    return [[
-    A simple hello world command
+help_helloworld = [[
+A simple hello world command
 
-    Usage: helloworld ARG
-    ]]
-end
+Usage: helloworld ARG
+]]
 
 function do_anotherhello()
     -- You don't need to accept any parameters in your function if you don't

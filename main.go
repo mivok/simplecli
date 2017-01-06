@@ -94,20 +94,13 @@ func Run(luaFile string) {
 				printCommands(L)
 				continue
 			} else {
-				fn := L.GetGlobal("help_" + args[0])
-				if fn.Type() != lua.LTFunction {
+				helpText := L.GetGlobal("help_" + args[0])
+				if helpText.Type() != lua.LTString {
 					fmt.Println("No help for command:", args[0])
 					continue
 				}
-				if err = L.CallByParam(lua.P{
-					Fn:      fn,
-					NRet:    1,
-					Protect: true,
-				}); err != nil {
-					fmt.Println(err.Error())
-				}
-				helpText := strings.TrimSpace(L.ToString(-1))
-				helpLines := strings.Split(helpText, "\n")
+				helpString := strings.TrimSpace(helpText.String())
+				helpLines := strings.Split(helpString, "\n")
 				for _, line := range helpLines {
 					fmt.Println(strings.TrimSpace(line))
 				}
@@ -188,6 +181,10 @@ func parseCommandLineFlags(L *lua.LState) {
 		k := klv.String()
 		if strings.HasPrefix(k, "_") {
 			// Skip internal variables
+			return
+		}
+		if strings.HasPrefix(k, "help_") {
+			// Skip help text
 			return
 		}
 		switch t := v.Type(); t {
