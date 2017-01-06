@@ -6,6 +6,7 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -86,6 +87,33 @@ func Run(luaFile string) {
 
 		cmd, args := parts[0], parts[1:]
 
+		// Help for commands is implemented in the help_foo
+		if cmd == "help" {
+			if len(args) == 0 {
+				printCommands(L)
+				continue
+			} else {
+				fn := L.GetGlobal("help_" + args[0])
+				if fn.Type() != lua.LTFunction {
+					fmt.Println("No help for command:", args[0])
+					continue
+				}
+				if err = L.CallByParam(lua.P{
+					Fn:      fn,
+					NRet:    1,
+					Protect: true,
+				}); err != nil {
+					fmt.Println(err.Error())
+				}
+				helpText := strings.TrimSpace(L.ToString(-1))
+				helpLines := strings.Split(helpText, "\n")
+				for _, line := range helpLines {
+					fmt.Println(strings.TrimSpace(line))
+				}
+				continue
+			}
+		}
+
 		// Convert args into a lua table
 		argsTable := &lua.LTable{}
 		for _, arg := range args {
@@ -99,12 +127,28 @@ func Run(luaFile string) {
 		}
 
 		if err = L.CallByParam(lua.P{
-			Fn:      L.GetGlobal("do_" + cmd),
+			Fn:      fn,
 			NRet:    0,
 			Protect: true,
 		}, lua.LString(cmd), argsTable); err != nil {
 			fmt.Println(err.Error())
 		}
+	}
+}
+
+func printCommands(L *lua.LState) {
+	commands := []string{}
+	globals := L.Get(lua.GlobalsIndex).(*lua.LTable)
+	globals.ForEach(func(klv lua.LValue, v lua.LValue) {
+		k := klv.String()
+		if v.Type() == lua.LTFunction && strings.HasPrefix(k, "do_") {
+			commands = append(commands, k[3:])
+		}
+	})
+	sort.Strings(commands)
+	fmt.Println("Available commands:")
+	for _, v := range commands {
+		fmt.Println(v)
 	}
 }
 
