@@ -104,3 +104,10 @@ function do_cat(cmd, args, tempfile)
     -- Or you can do the following to view it with your pager
     -- os.execute("less " .. tempfile)
 end
+
+function do_template(cmd, args)
+    -- An example of using a template
+    io.write(t("Myvar is: {{myvar}}\n"))
+    -- You can use functions defined in lua also as template variables
+    io.write(t("This calls the banner() function: {{banner}}\n"))
+end

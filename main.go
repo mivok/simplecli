@@ -13,6 +13,7 @@ import (
 
 	"github.com/chzyer/readline"
 	"github.com/google/shlex"
+	"github.com/valyala/fasttemplate"
 	"github.com/yuin/gopher-lua"
 )
 
@@ -288,11 +289,64 @@ func cliEdit(L *lua.LState) int {
 	return 1
 }
 
+func cliTemplateFunction(L *lua.LState, funcName string) func(io.Writer, string) (int, error) {
+	// Returns a go function that calls a lua function by name with no
+	// parameters. Used to implement calling lua functions from template
+	// strings.
+	return func(buf io.Writer, tag string) (int, error) {
+		err := L.CallByParam(lua.P{
+			Fn:      L.GetGlobal(funcName),
+			NRet:    1,
+			Protect: true,
+		})
+		if err != nil {
+			return 0, err
+		}
+		retval := L.Get(-1).String()
+		L.Pop(1)
+		return buf.Write([]byte(retval))
+	}
+}
+
+func cliTemplate(L *lua.LState) int {
+	templateString := L.ToString(1)
+	vars := map[string]interface{}{}
+
+	// All lua global variables and functions are available for use as
+	// template variables
+	globals := L.Get(lua.GlobalsIndex).(*lua.LTable)
+	globals.ForEach(func(klv lua.LValue, v lua.LValue) {
+		k := klv.String()
+		if strings.HasPrefix(k, "_") {
+			// Skip internal variables
+			return
+		}
+		switch t := v.Type(); t {
+		case lua.LTString:
+			vars[k] = v.String()
+		case lua.LTNumber:
+			vars[k] = v.String()
+		case lua.LTBool:
+			vars[k] = v.String()
+		case lua.LTFunction:
+			vars[k] = fasttemplate.TagFunc(cliTemplateFunction(L, k))
+		}
+	})
+	t, err := fasttemplate.NewTemplate(templateString, "{{", "}}")
+	if err != nil {
+		fmt.Println(err.Error())
+		return 0
+	}
+	L.Push(lua.LString(t.ExecuteString(vars)))
+	return 1
+}
+
 func registerLuaFunctions(L *lua.LState) {
 	L.SetGlobal("cli_variable", L.NewFunction(cliVariable))
 	L.SetGlobal("cli_envvar", L.NewFunction(cliEnvvar))
 	L.SetGlobal("cli_toggle", L.NewFunction(cliToggle))
 	L.SetGlobal("cli_edit", L.NewFunction(cliEdit))
+	L.SetGlobal("t", L.NewFunction(cliTemplate))
 }
 
 func main() {
