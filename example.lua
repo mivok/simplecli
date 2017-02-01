@@ -119,3 +119,10 @@ function do_template(args)
     local some_table = {a = "foo", b = "bar", c = "baz"}
     io.write(t("some_table[a]: {{some_table[a]}}\n"))
 end
+
+cwd = "/"
+function do_cd(args)
+    -- This works like cli_variable, but with special handling of the new
+    -- value to deal with relative paths
+    cli_cd("cwd", args[1])
+end

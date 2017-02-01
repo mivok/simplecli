@@ -232,6 +232,48 @@ func cliVariable(L *lua.LState) int {
 	return 0 // Number of results
 }
 
+func cliCd(L *lua.LState) int {
+	varname := L.ToString(1)
+	value := L.ToString(2)
+
+	if len(value) == 0 {
+		L.SetGlobal(varname, lua.LString("/"))
+	} else if strings.HasPrefix(value, "/") {
+		L.SetGlobal(varname, lua.LString(value))
+	} else {
+		parts := strings.Split(value, "/")
+		oldvalue := L.GetGlobal(varname).String()
+		if oldvalue == "" {
+			L.SetGlobal(varname, lua.LString("/"))
+		}
+		cwd := strings.Split(oldvalue[1:], "/")
+		if cwd[len(cwd)-1] == "" {
+			cwd = cwd[:len(cwd)-1]
+		}
+		if len(cwd) == 1 && cwd[0] == "" {
+			cwd = []string{}
+		}
+		for _, part := range parts {
+			if part == "." {
+				continue
+			} else if part == ".." {
+				if len(cwd) > 0 {
+					cwd = cwd[:len(cwd)-1]
+				}
+			} else {
+				cwd = append(cwd, part)
+			}
+		}
+		newvalue := "/" + strings.Join(cwd, "/")
+		if strings.HasSuffix(newvalue, "/") {
+			newvalue = newvalue[:len(newvalue)-1]
+		}
+		L.SetGlobal(varname, lua.LString(newvalue))
+	}
+	fmt.Printf("%s=%s\n", varname, L.GetGlobal(varname).String())
+	return 0 // Number of results
+}
+
 func cliEnvvar(L *lua.LState) int {
 	varname := L.ToString(1)
 	value := L.ToString(2)
@@ -372,6 +414,7 @@ func cliTemplate(L *lua.LState) int {
 
 func registerLuaFunctions(L *lua.LState) {
 	L.SetGlobal("cli_variable", L.NewFunction(cliVariable))
+	L.SetGlobal("cli_cd", L.NewFunction(cliCd))
 	L.SetGlobal("cli_envvar", L.NewFunction(cliEnvvar))
 	L.SetGlobal("cli_toggle", L.NewFunction(cliToggle))
 	L.SetGlobal("cli_edit", L.NewFunction(cliEdit))
