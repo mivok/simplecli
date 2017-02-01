@@ -13,7 +13,7 @@ function prompt()
     return os.date("%H:%M:%S") .. "> "
 end
 
-function do_helloworld(cmd, args)
+function do_helloworld(args)
     -- Simple hello world command, prints out the first argument
     io.write("Hello world: ", cmd, " - ", args[1], "\n")
 end
@@ -36,24 +36,24 @@ end
 -- If you do, they will also be available to set as flags
 myvar = "default_value"
 
-function do_myvar(cmd, args)
+function do_myvar(args)
     -- Get/Set a string variable
     -- These variables are accessible as global variables in lua, and you can
     -- predeclare them to get default values (otherwise the default is nil)
     cli_variable("myvar", args[1])
 end
 
-function do_profile(cmd, args)
+function do_profile(args)
     -- Set/get environment variables
     cli_envvar("AWS_PROFILE", args[1])
 end
 
-function do_debug(cmd, args)
+function do_debug(args)
     -- Boolean globals
     cli_toggle("debug_mode")
 end
 
-function do_cmd(cmd, args)
+function do_cmd(args)
     -- Run an external command - just use os.execute
 
     -- Set a default for the first arg
@@ -74,7 +74,7 @@ end
 -- your function is called that you can use to download your file to. The
 -- file will exist and be blank at the start of the function, and will be
 -- deleted right after.
-function do_edit(cmd, args, tempfile)
+function do_edit(args, tempfile)
     -- The following is how you do an edit workflow, where a command downloads
     -- a file, you edit it in your text editor and then it's re-uploaded if it
     -- was modified.
@@ -93,7 +93,7 @@ function do_edit(cmd, args, tempfile)
     end
 end
 
-function do_cat(cmd, args, tempfile)
+function do_cat(args, tempfile)
     -- Display a downloaded file
 
     -- This is contrived (you could just not add the -o option to curl), but
@@ -105,7 +105,7 @@ function do_cat(cmd, args, tempfile)
     -- os.execute("less " .. tempfile)
 end
 
-function do_template(cmd, args)
+function do_template(args)
     -- An example of using a template
     io.write(t("Myvar is: {{myvar}}\n"))
     -- You can use functions defined in lua also as template variables

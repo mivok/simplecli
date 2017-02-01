@@ -123,7 +123,7 @@ func Run(luaFile string) {
 			continue
 		}
 
-		if fn.Proto.NumParameters == 3 {
+		if fn.Proto.NumParameters == 2 {
 			// A function can take a third parameter, which will be a filename
 			// for a temporary file. We only want to make it though if the
 			// function will use it.
@@ -139,8 +139,7 @@ func Run(luaFile string) {
 				Fn:      fn,
 				NRet:    0,
 				Protect: true,
-			}, lua.LString(cmd), argsTable,
-				lua.LString(tmpfilename)); err != nil {
+			}, argsTable, lua.LString(tmpfilename)); err != nil {
 				fmt.Println(err.Error())
 			}
 			os.Remove(tmpfilename)
@@ -149,7 +148,7 @@ func Run(luaFile string) {
 				Fn:      fn,
 				NRet:    0,
 				Protect: true,
-			}, lua.LString(cmd), argsTable); err != nil {
+			}, argsTable); err != nil {
 				fmt.Println(err.Error())
 			}
 		}
