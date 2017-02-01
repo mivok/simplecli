@@ -47,7 +47,7 @@ function:
 #!/usr/bin/env simplecli
 -- vim: filetype=lua
 
-function do_hello(cmd, args)
+function do_hello(args)
   io.write("Hello world!\n")
 end
 ```
@@ -67,7 +67,7 @@ wrap external commands, so let's do that. Edit `myapp.lua` and add a new
 function:
 
 ```
-function do_httpbin(cmd, args)
+function do_httpbin(args)
   os.execute(string.format([[
     curl -X POST httpbin.org/post \
       -H 'Content-Type: application/json' \
