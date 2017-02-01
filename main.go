@@ -329,8 +329,38 @@ func cliTemplate(L *lua.LState) int {
 			vars[k] = v.String()
 		case lua.LTFunction:
 			vars[k] = fasttemplate.TagFunc(cliTemplateFunction(L, k))
+		case lua.LTTable:
+			// Tables are accessible with {{tblname[key]}}
+			// e.g. foo[bar] or foo[1]
+			tbl := v.(*lua.LTable)
+			tbl.ForEach(func(tblk lua.LValue, tblv lua.LValue) {
+				vars[k+"["+tblk.String()+"]"] = tblv.String()
+			})
 		}
 	})
+	// Add local variables too
+	debug, ok := L.GetStack(-1)
+	if ok {
+		idx := 1
+		for {
+			k, v := L.GetLocal(debug, idx)
+			if k == "" {
+				break
+			}
+			tbl, ok := v.(*lua.LTable)
+			if ok {
+				// Tables are accessible with tblname[key]
+				// e.g. foo[bar] or foo[1] or args[1]
+				tbl.ForEach(func(tblk lua.LValue, tblv lua.LValue) {
+					vars[k+"["+tblk.String()+"]"] = tblv.String()
+				})
+			} else {
+				vars[k] = v.String()
+			}
+			idx++
+		}
+	}
+
 	t, err := fasttemplate.NewTemplate(templateString, "{{", "}}")
 	if err != nil {
 		fmt.Println(err.Error())

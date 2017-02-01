@@ -110,4 +110,12 @@ function do_template(args)
     io.write(t("Myvar is: {{myvar}}\n"))
     -- You can use functions defined in lua also as template variables
     io.write(t("This calls the banner() function: {{banner}}\n"))
+    -- Local variables work too
+    local localvar = "Hello world"
+    io.write(t("localvar is: {{localvar}}\n"))
+    -- And you can refer to command arguments too
+    io.write(t("first arg: {{args[1]}}; second arg: {{args[2]}}\n"))
+    -- Tables are referenced using foo[bar]
+    local some_table = {a = "foo", b = "bar", c = "baz"}
+    io.write(t("some_table[a]: {{some_table[a]}}\n"))
 end
