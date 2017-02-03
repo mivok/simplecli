@@ -265,8 +265,8 @@ func cliCd(L *lua.LState) int {
 			}
 		}
 		newvalue := "/" + strings.Join(cwd, "/")
-		if strings.HasSuffix(newvalue, "/") && newvalue != "/" {
-			newvalue = newvalue[:len(newvalue)-1]
+		if !strings.HasSuffix(newvalue, "/") {
+			newvalue = newvalue + "/"
 		}
 		L.SetGlobal(varname, lua.LString(newvalue))
 	}
