@@ -352,8 +352,12 @@ func cliTemplateFunction(L *lua.LState, funcName string) func(io.Writer, string)
 func cliTemplate(L *lua.LState) int {
 	templateString := L.ToString(1)
 	vars := map[string]interface{}{}
-
-	// All lua global variables and functions are available for use as
+	// First, make environment variables available in templates
+	for _, envstr := range os.Environ() {
+		parts := strings.SplitN(envstr, "=", 2)
+		vars[parts[0]] = parts[1]
+	}
+	// Next, make all lua global variables and functions available as
 	// template variables
 	globals := L.Get(lua.GlobalsIndex).(*lua.LTable)
 	globals.ForEach(func(klv lua.LValue, v lua.LValue) {
