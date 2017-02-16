@@ -38,6 +38,7 @@ func Run(luaFile string) {
 
 	registerLuaFunctions(L)
 	parseCommandLineFlags(L)
+	setupAutocomplete(rl, L)
 
 	// The banner function lets you print some text when the CLI starts
 	bannerfn := L.GetGlobal("banner")
@@ -414,6 +415,71 @@ func cliTemplate(L *lua.LState) int {
 	}
 	L.Push(lua.LString(t.ExecuteString(vars)))
 	return 1
+}
+
+func autocompleteFunc(L *lua.LState, funcobj *lua.LFunction) func(string) []string {
+	// Returns a go function that calls a lua autocomplete function by name.
+	return func(line string) []string {
+		err := L.CallByParam(lua.P{
+			Fn:      funcobj,
+			NRet:    1,
+			Protect: true,
+		}, lua.LString(line))
+		if err != nil {
+			return []string{}
+		}
+		retval, ok := L.Get(-1).(*lua.LTable)
+		L.Pop(1)
+		if !ok {
+			fmt.Println("Autocomplete error: function didn't return a table")
+			return []string{}
+		}
+		items := []string{}
+		retval.ForEach(func(klv lua.LValue, v lua.LValue) {
+			items = append(items, v.String())
+		})
+		return items
+	}
+}
+
+func setupAutocomplete(rl *readline.Instance, L *lua.LState) {
+	completer := readline.NewPrefixCompleter()
+	rl.Config.AutoComplete = completer
+	// With children: readline.PcItem("test", readline.PcItem("foo"))
+	// Dynamic: readline.PcItemDynamic(someFunction("foo"), children...)
+	// type DynamicCompleteFunc func(string) []string
+	globals := L.Get(lua.GlobalsIndex).(*lua.LTable)
+	globals.ForEach(func(klv lua.LValue, v lua.LValue) {
+		k := klv.String()
+		if strings.HasPrefix(k, "do_") {
+			commandName := k[3:]
+			autocomplete_var := L.GetGlobal("autocomplete_" + commandName)
+			if autocomplete_var.Type() != lua.LTNil {
+				autocomplete_var, ok := autocomplete_var.(*lua.LTable)
+				if !ok {
+					fmt.Println("WARNING: autocomplete variable for",
+						commandName, "must be a table. Skipping.")
+					return
+				}
+				items := []readline.PrefixCompleterInterface{}
+				// TODO - this needs to be recursive
+				autocomplete_var.ForEach(func(_, acv lua.LValue) {
+					if acv.Type() == lua.LTFunction {
+						items = append(items,
+							readline.PcItemDynamic(autocompleteFunc(L,
+								acv.(*lua.LFunction))))
+					} else {
+						items = append(items, readline.PcItem(acv.String()))
+					}
+				})
+				completer.Children = append(completer.Children,
+					readline.PcItem(commandName, items...))
+			} else {
+				completer.Children = append(completer.Children,
+					readline.PcItem(commandName))
+			}
+		}
+	})
 }
 
 func registerLuaFunctions(L *lua.LState) {
